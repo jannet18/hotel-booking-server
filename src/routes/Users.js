@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { check, validationResult } from "express-validator";
+import verifyToken from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.post(
@@ -13,12 +14,16 @@ router.post(
     check("password", "Password with 6 or more characters required").isLength({
       min: 6,
     }),
+    check("acceptTerms", "You must accept terms and conditions")
+      .isBoolean()
+      .equals(true),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: errors.array() });
     }
+    const { firstName, lastName, email, password, acceptTerms } = req.body;
     try {
       let user = await User.findOne({
         email: req.body.email,
@@ -26,17 +31,26 @@ router.post(
       if (user) {
         return res.status(400).json({ message: "User already exists!" });
       }
-      user = new User(req.body);
+      user = new User({
+        firstName,
+        lastName,
+        email,
+        password: password,
+      });
       await user.save();
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "1d",
+        expiresIn: acceptTerms
+          ? process.env.JWT_EXPIRATION_LONG
+          : process.env.JWT_EXPIRATION_SHORT,
       });
 
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 86400000,
+        maxAge: acceptTerms
+          ? process.env.JWT_EXPIRATION_LONG_MS
+          : process.env.JWT_EXPIRATION_SHORT_MS,
       });
 
       return res.status(200).send({ message: "User registered successfully" });
@@ -46,5 +60,9 @@ router.post(
     }
   }
 );
+
+router.get("/validate-token", verifyToken, (req, res) => {
+  res.status(200).send({ userId: req.userId });
+});
 
 export default router;

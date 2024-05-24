@@ -12,13 +12,14 @@ router.post(
     check("password", "Password with 6 or more characters required").isLength({
       min: 6,
     }),
+    check("remember_me", "Remember Me must be checked").isBoolean(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: errors.array() });
     }
-    const { email, password } = req.body;
+    const { email, password, remember_me } = req.body;
     try {
       const user = await User.findOne({ email });
       if (!user) {
@@ -29,12 +30,16 @@ router.post(
         res.status(400).json({ message: "Invalid Credentials" });
       }
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "1d",
+        expiresIn: remember_me
+          ? process.env.JWT_EXPIRATION_LONG
+          : process.env.JWT_EXPIRATION_SHORT,
       });
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 86400000,
+        maxAge: remember_me
+          ? process.env.JWT_EXPIRATION_LONG_MS
+          : JWT_EXPIRATION_SHORT_MS,
       });
       res.status(200).json({ userId: user._id });
     } catch (error) {
