@@ -3,6 +3,7 @@ import { check, validationResult } from "express-validator";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import verifyToken from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.post(
@@ -12,7 +13,7 @@ router.post(
     check("password", "Password with 6 or more characters required").isLength({
       min: 6,
     }),
-    check("remember_me", "Remember Me must be checked").isBoolean(),
+    // check("remember_me", "Remember Me must be checked").isBoolean(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -47,4 +48,15 @@ router.post(
     }
   }
 );
+
+router.get("/validate-token", verifyToken, (req, res) => {
+  res.status(200).send({ userId: req.userId });
+});
+
+router.post("/logout", (res, req) => {
+  res.cookies("auth_token", "", {
+    expires: new Date(0),
+  });
+  res.send();
+});
 export default router;

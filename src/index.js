@@ -4,21 +4,21 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import userRoutes from "./routes/Users.js";
 import authRoutes from "./routes/auth.js";
+import cookieParser from "cookie-parser";
 
 await mongoose.connect(process.env.MONGODB_CONNECTION);
 
 const app = express();
+app.use(cookieParser());
 app.use(express.json()); //converts body of API into json automatically
 app.use(express.urlencoded({ extended: true })); // parse the url and get url parameters
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  })
-);
-
-app.use("/api/users", userRoutes);
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true,
+};
+app.use(cors(corsOptions));
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 app.listen(5000, () => {
   console.log("Server is active");
