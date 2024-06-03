@@ -13,7 +13,7 @@ router.post(
     check("password", "Password with 6 or more characters required").isLength({
       min: 6,
     }),
-    // check("remember_me", "Remember Me must be checked").isBoolean(),
+    check("remember_me", "Remember Me must be checked").isBoolean(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -35,6 +35,7 @@ router.post(
           ? process.env.JWT_EXPIRATION_LONG
           : process.env.JWT_EXPIRATION_SHORT,
       });
+      console.log(token);
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -53,8 +54,8 @@ router.get("/validate-token", verifyToken, (req, res) => {
   res.status(200).send({ userId: req.userId });
 });
 
-router.post("/logout", (res, req) => {
-  res.cookies("auth_token", "", {
+router.post("/logout", (req, res) => {
+  res.cookie("auth_token", "", {
     expires: new Date(0),
   });
   res.send();

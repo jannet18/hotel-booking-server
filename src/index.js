@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import userRoutes from "./routes/Users.js";
 import authRoutes from "./routes/auth.js";
 import cookieParser from "cookie-parser";
+import path from "path";
 
 await mongoose.connect(process.env.MONGODB_CONNECTION);
 
@@ -17,6 +18,7 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+app.use(express.static(path.join(__dirname, "../../client/src")));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 
