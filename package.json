@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon",
     "build": "npm install",
-    "start": "node server/index.js",
+    "start": "node index.js",
     "e2e": "cross-env DOTEN_CONFIG_PATH=.env.e2e nodemon"
   },
   "author": "",
