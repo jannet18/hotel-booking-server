@@ -5,15 +5,15 @@
   "description": "",
   "main": "./src/index.js",
   "scripts": {
-    "dev": "nodemon",
-    "build": "npm install",
-    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "start": "node src/index.js",
     "e2e": "cross-env DOTEN_CONFIG_PATH=.env.e2e nodemon"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.2.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
@@ -22,7 +22,8 @@
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.6.1",
-    "mongoose": "^8.3.4"
+    "mongoose": "^8.3.4",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
