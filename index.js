@@ -2,12 +2,12 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import mongoose from "mongoose";
-import userRoutes from "./routes/Users.js";
-import authRoutes from "./routes/auth.js";
+import userRoutes from "./src/routes/Users.js";
+import authRoutes from "./src/routes/auth.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
-import myHotelRoutes from "./routes/my-hotels.js";
+import myHotelRoutes from "./src/routes/my-hotels.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

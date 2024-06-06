@@ -6,7 +6,7 @@
   "main": "./src/index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node src/index.js",
+    "start": "node index.js",
     "e2e": "cross-env DOTEN_CONFIG_PATH=.env.e2e nodemon"
   },
   "author": "",
