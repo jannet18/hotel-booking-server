@@ -51,6 +51,7 @@ router.post(
         maxAge: acceptTerms
           ? process.env.JWT_EXPIRATION_LONG_MS
           : process.env.JWT_EXPIRATION_SHORT_MS,
+        sameSite: "Strict",
       });
       return res.status(200).send({ message: "User registered successfully" });
     } catch (error) {
