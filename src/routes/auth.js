@@ -35,7 +35,7 @@ router.post(
           ? process.env.JWT_EXPIRATION_LONG
           : process.env.JWT_EXPIRATION_SHORT,
       });
-      console.log(token);
+      // console.log(token);
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
