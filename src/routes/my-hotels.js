@@ -139,14 +139,7 @@ router.post(
         return res.status(400).json({ message: "No images uploaded!" });
       }
 
-      const uploadPromises = imageFiles.map(async (image) => {
-        const b64 = Buffer.from(image.buffer).toString("base64");
-        const dataURI = `data:${image.mimetype};base64,${b64}`;
-        const result = await cloudinary.uploader.upload(dataURI);
-        return result.url;
-      });
-
-      const imageUrls = await Promise.all(uploadPromises);
+      const imageUrls = await uploadImages(imageFiles);
 
       const newHotel = new Hotel({
         name,
@@ -186,7 +179,7 @@ router.get("/", verifyToken, async (req, res) => {
 router.get("/:id", verifyToken, async (req, res) => {
   const id = req.params.id.toString();
   try {
-    const hotel = await Hotel.find({
+    const hotel = await Hotel.findOne({
       _id: id,
       userId: req.userId,
     });
@@ -195,5 +188,101 @@ router.get("/:id", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Error finding Hotel" });
   }
 });
+
+// router.put(
+//   "/:hotelId",
+//   verifyToken,
+//   upload.array("imageFiles", 6),
+//   async (req, res) => {
+//     try {
+//       const updatedHotel = req.body;
+//       updatedHotel.lastUpdated = new Date();
+
+//       const hotel = await Hotel.findOneAndUpdate(
+//         {
+//           _id: req.params.hotelId,
+//           userId: req.userId,
+//         },
+//         updatedHotel,
+//         { new: true }
+//       );
+//       if (!hotel) {
+//         return res.status(404).json({ message: "Hotel not found" });
+//       }
+
+//       const files = req.files;
+//       const updatedImageUrls = uploadImages(files);
+
+//       hotel.imageUrls = [
+//         ...updatedImageUrls,
+//         ...(updatedHotel.imageUrls || []),
+//       ];
+//       await hotel.save();
+//       res.status(201).json(hotel);
+//     } catch (error) {
+//       res.status(500).json({ message: "Something went wrong!" });
+//     }
+//   }
+// );
+
+router.put(
+  "/:hotelId",
+  verifyToken,
+  upload.array("imageFiles"),
+  [
+    body("name").notEmpty().withMessage("Name is required"),
+    body("city").notEmpty().withMessage("City is required"),
+    body("country").notEmpty().withMessage("Country is required"),
+    body("description").notEmpty().withMessage("Description is required"),
+    body("type").notEmpty().withMessage("Hotel type is required"),
+    body("pricePerNight")
+      .isNumeric()
+      .withMessage("Price per night must be a number"),
+    body("facilities").isArray().withMessage("Facilities must be an array"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    try {
+      const hotelId = req.params.hotelId;
+      const userId = req.userId;
+      const updatedHotel = { ...req.body, lastUpdated: new Date() };
+
+      const hotel = await Hotel.findOne({ _id: hotelId, userId: userId });
+      if (!hotel) {
+        return res.status(400).json({ message: "Hotel not found" });
+      }
+
+      const files = req.files;
+      let updatedImageUrls = [];
+      if (files.length > 0) {
+        updatedImageUrls = await uploadImages(files);
+      }
+
+      updatedHotel.imageUrls = [
+        ...(hotel.imageUrls || []),
+        ...updatedImageUrls,
+      ];
+
+      Object.assign(hotel, updatedHotel);
+      await hotel.save();
+    } catch (error) {
+      res.status(500).json({ message: "Something went wrong!" });
+    }
+  }
+);
+async function uploadImages(imageFiles) {
+  const uploadPromises = imageFiles.map(async (image) => {
+    const b64 = Buffer.from(image.buffer).toString("base64");
+    const dataURI = `data:${image.mimetype};base64,${b64}`;
+    const result = await cloudinary.uploader.upload(dataURI);
+    return result.url;
+  });
+
+  const imageUrls = await Promise.all(uploadPromises);
+  return imageUrls;
+}
 
 export default router;
