@@ -189,6 +189,41 @@ router.get("/:id", verifyToken, async (req, res) => {
   }
 });
 
+router.put(
+  "/:hotelId",
+  verifyToken,
+  upload.array("imageFiles"),
+  async (req, res) => {
+    try {
+      const updatedHotel = req.body;
+      updatedHotel.lastUpdated = new Date();
+
+      const hotel = await Hotel.findOneAndUpdate(
+        {
+          _id: req.params.hotelId,
+          userId: req.userId,
+        },
+        updatedHotel,
+        { new: true }
+      );
+
+      if (!hotel) {
+        return res.status(404).json({ message: "Hotel not found" });
+      }
+
+      const files = req.files;
+      if (files && files.length > 0) {
+        const updatedImageUrls = await uploadImages(files);
+        hotel.imageUrls = [...updatedImageUrls, ...(hotel.imageUrls || [])];
+      }
+
+      await hotel.save();
+      res.status(201).json(hotel);
+    } catch (error) {
+      res.status(500).json({ message: "Something went wrong!" });
+    }
+  }
+);
 // router.put(
 //   "/:hotelId",
 //   verifyToken,
@@ -198,25 +233,35 @@ router.get("/:id", verifyToken, async (req, res) => {
 //       const updatedHotel = req.body;
 //       updatedHotel.lastUpdated = new Date();
 
+//       const files = req.files;
+//       const existingImageUrls = req.body.existingImageUrls
+//         ? JSON.parse(req.body.existingImageUrls)
+//         : [];
+//       let newImageUrls = [];
+//       if (files && files.length > 0) {
+//         newImageUrls = await uploadImages(files);
+//       }
+//       // const updatedImageUrls = uploadImages(files);
+
+//       // hotel.imageUrls = [
+//       //   ...updatedImageUrls,
+//       //   ...(updatedHotel.imageUrls || []),
+//       // ];
 //       const hotel = await Hotel.findOneAndUpdate(
 //         {
 //           _id: req.params.hotelId,
 //           userId: req.userId,
 //         },
-//         updatedHotel,
+//         {
+//           ...updatedHotel,
+//           newImageUrls: [...existingImageUrls, ...newImageUrls],
+//         },
 //         { new: true }
 //       );
 //       if (!hotel) {
 //         return res.status(404).json({ message: "Hotel not found" });
 //       }
 
-//       const files = req.files;
-//       const updatedImageUrls = uploadImages(files);
-
-//       hotel.imageUrls = [
-//         ...updatedImageUrls,
-//         ...(updatedHotel.imageUrls || []),
-//       ];
 //       await hotel.save();
 //       res.status(201).json(hotel);
 //     } catch (error) {
@@ -225,54 +270,114 @@ router.get("/:id", verifyToken, async (req, res) => {
 //   }
 // );
 
-router.put(
-  "/:hotelId",
-  verifyToken,
-  upload.array("imageFiles"),
-  [
-    body("name").notEmpty().withMessage("Name is required"),
-    body("city").notEmpty().withMessage("City is required"),
-    body("country").notEmpty().withMessage("Country is required"),
-    body("description").notEmpty().withMessage("Description is required"),
-    body("type").notEmpty().withMessage("Hotel type is required"),
-    body("pricePerNight")
-      .isNumeric()
-      .withMessage("Price per night must be a number"),
-    body("facilities").isArray().withMessage("Facilities must be an array"),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    try {
-      const hotelId = req.params.hotelId;
-      const userId = req.userId;
-      const updatedHotel = { ...req.body, lastUpdated: new Date() };
+// router.put(
+//   "/:hotelId",
+//   verifyToken,
+//   [
+//     body("name").notEmpty().withMessage("Name is required"),
+//     body("city").notEmpty().withMessage("City is required"),
+//     body("country").notEmpty().withMessage("Country is required"),
+//     body("description").notEmpty().withMessage("Description is required"),
+//     body("type").notEmpty().withMessage("Hotel type is required"),
+//     body("pricePerNight")
+//       .isNumeric()
+//       .withMessage("Price per night must be a number"),
+//     body("facilities").isArray().withMessage("Facilities must be an array"),
+//   ],
+//   upload.array("imageFiles"),
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(400).json({ errors: errors.array() });
+//     }
+//     try {
+//       const hotelId = req.params.hotelId;
+//       const userId = req.userId;
+//       const updatedHotel = { ...req.body, lastUpdated: new Date() };
 
-      const hotel = await Hotel.findOne({ _id: hotelId, userId: userId });
-      if (!hotel) {
-        return res.status(400).json({ message: "Hotel not found" });
-      }
+//       const newHotel = await Hotel.findOne(
+//         {
+//           _id: hotelId,
+//           userId: userId,
+//         },
+//         { new: true }
+//       );
+//       if (!newHotel) {
+//         return res.status(400).json({ message: "Hotel not found" });
+//       }
 
-      const files = req.files;
-      let updatedImageUrls = [];
-      if (files.length > 0) {
-        updatedImageUrls = await uploadImages(files);
-      }
+//       const files = req.files;
+//       const existingImageUrls = Array.isArray(req.body.existingImageUrls)
+//         ? req.body.existingImageUrls
+//         : [req.body.existingImageUrls.filter(Boolean)];
+//       let newImageUrls = [];
+//       if (files && files.length > 0) {
+//         newImageUrls = await uploadImages(files);
+//       }
 
-      updatedHotel.imageUrls = [
-        ...(hotel.imageUrls || []),
-        ...updatedImageUrls,
-      ];
+//       updatedHotel.imageUrls = [...existingImageUrls, ...newImageUrls];
+//       // const files = req.files;
+//       // const newImageUrls = await uploadImages(files);
 
-      Object.assign(hotel, updatedHotel);
-      await hotel.save();
-    } catch (error) {
-      res.status(500).json({ message: "Something went wrong!" });
-    }
-  }
-);
+//       // newHotel.imageUrls = [...newImageUrls, ...(updatedHotel.imageUrls || [])];
+//       Object.assign(newHotel, updatedHotel);
+//       await newHotel.save();
+//       res.status(200).json(newHotel);
+//     } catch (error) {
+//       console.log("errors", error.message);
+//       res.status(500).json({ message: "Something went wrong" });
+//     }
+//   }
+// );
+// router.put(
+//   "/:hotelId",
+//   verifyToken,
+//   upload.array("imageFiles"),
+//   [
+//     body("name").notEmpty().withMessage("Name is required"),
+//     body("city").notEmpty().withMessage("City is required"),
+//     body("country").notEmpty().withMessage("Country is required"),
+//     body("description").notEmpty().withMessage("Description is required"),
+//     body("type").notEmpty().withMessage("Hotel type is required"),
+//     body("pricePerNight")
+//       .isNumeric()
+//       .withMessage("Price per night must be a number"),
+//     body("facilities").isArray().withMessage("Facilities must be an array"),
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(400).json({ errors: errors.array() });
+//     }
+//     try {
+//       const hotelId = req.params.hotelId;
+//       const userId = req.userId;
+//       const updatedHotel = { ...req.body, lastUpdated: new Date() };
+
+//       const hotel = await Hotel.findOne({ _id: hotelId, userId: userId });
+//       if (!hotel) {
+//         return res.status(400).json({ message: "Hotel not found" });
+//       }
+
+//       const files = req.files;
+//       const existingImageUrls = Array.isArray(req.body.existingImageUrls)
+//         ? req.body.existingImageUrls
+//         : [req.body.existingImageUrls].filter(Boolean);
+
+//       let newImageUrls = [];
+//       if (files && files.length > 0) {
+//         newImageUrls = await uploadImages(files);
+//       }
+
+//       updatedHotel.imageUrls = [...existingImageUrls, ...newImageUrls];
+
+//       Object.assign(hotel, updatedHotel);
+//       await hotel.save();
+//     } catch (error) {
+//       res.status(500).json({ message: "Something went wrong!" });
+//     }
+//   }
+// );
 async function uploadImages(imageFiles) {
   const uploadPromises = imageFiles.map(async (image) => {
     const b64 = Buffer.from(image.buffer).toString("base64");
