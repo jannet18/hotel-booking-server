@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import myHotelRoutes from "./routes/my-hotels.js";
-
+import hotelRoutes from "./routes/hotel.js";
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -33,6 +33,7 @@ app.use(cors(corsOptions));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/my-hotels", myHotelRoutes);
+app.use("api/hotels", hotelRoutes);
 
 app.listen(5000, () => {
   console.log("Server is active");
