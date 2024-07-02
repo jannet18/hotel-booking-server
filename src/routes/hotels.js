@@ -24,14 +24,14 @@ router.get("/search", async (req, res) => {
     const pageNumber = parseInt(
       req.query.page ? req.query.page.toString() : "1"
     );
-    const skip = (pageNumber - 1) * pageSize;
+    const skip = parseInt(pageNumber - 1) * pageSize;
 
     const hotels = await Hotel.find(query)
       .sort(sortOptions)
       .skip(skip)
       .limit(pageSize);
 
-    const total = await Hotel.countDocuments();
+    const total = await Hotel.countDocuments(query);
 
     const response = {
       data: hotels,
@@ -48,6 +48,56 @@ router.get("/search", async (req, res) => {
     res.status(500).json({ message: "Something went wrong!" });
   }
 });
+
+// Search hotels with filters and sorting
+// router.get("/search", async (req, res) => {
+//   const {
+//     destination,
+//     checkIn,
+//     checkOut,
+//     adultCount,
+//     childCount,
+//     page = 1,
+//     stars,
+//     types,
+//     facilities,
+//     maxPrice,
+//     sortOption,
+//   } = req.query;
+
+//   try {
+//     const query = {
+//       ...(destination && { location: { $regex: destination, $options: "i" } }),
+//       ...(stars && { starRating: { $in: stars.split(",").map(Number) } }),
+//       ...(types && { hotelType: { $in: types.split(",") } }),
+//       ...(facilities && { facilityTypes: { $all: facilities.split(",") } }),
+//       ...(maxPrice && { pricePerNight: { $lte: Number(maxPrice) } }),
+//     };
+
+//     const sort = {};
+//     if (sortOption === "pricePerNightAsc") {
+//       sort.pricePerNight = 1;
+//     } else if (sortOption === "pricePerNightDesc") {
+//       sort.pricePerNight = -1;
+//     } else if (sortOption === "starRating") {
+//       sort.starRating = -1;
+//     }
+
+//     const hotels = await Hotel.find(query)
+//       .skip((page - 1) * 10)
+//       .limit(10)
+//       .sort(sort);
+
+//     const total = await Hotel.countDocuments(query);
+
+//     res.json({
+//       hotels,
+//       pagination: { total, page, pages: Math.ceil(total / 10) },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: "Error searching hotels", error });
+//   }
+// });
 
 router.get(
   "/:id",
@@ -69,10 +119,14 @@ router.get(
 const constructSearchQuery = (queryParams) => {
   let constructedQuery = {};
 
-  if (queryParams.destination) {
+  if (
+    queryParams?.destination &&
+    typeof queryParams.destination === "string" &&
+    queryParams.destination.trim() !== ""
+  ) {
     constructedQuery.$or = [
-      { city: new RegExp(queryParams.destination, "i") },
-      { country: new RegExp(queryParams.destination, "i") },
+      { city: new RegExp(queryParams?.destination, "i") },
+      { country: new RegExp(queryParams?.destination, "i") },
     ];
   }
 
@@ -117,7 +171,7 @@ const constructSearchQuery = (queryParams) => {
       $lte: parseInt(queryParams.maxPrice).toString(),
     };
   }
-
+  console.log("constructed query:", constructedQuery);
   return constructedQuery;
 };
 export default router;
