@@ -1,6 +1,11 @@
 import express from "express";
 import Hotel from "../models/Hotel.js";
 import { param, validationResult } from "express-validator";
+import Stripe from "stripe";
+import verifyToken from "../middleware/authMiddleware.js";
+
+const stripe = new Stripe(process.env.STRIPE_API_KEY);
+
 const router = express.Router();
 
 router.get("/search", async (req, res) => {
@@ -49,56 +54,6 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// Search hotels with filters and sorting
-// router.get("/search", async (req, res) => {
-//   const {
-//     destination,
-//     checkIn,
-//     checkOut,
-//     adultCount,
-//     childCount,
-//     page = 1,
-//     stars,
-//     types,
-//     facilities,
-//     maxPrice,
-//     sortOption,
-//   } = req.query;
-
-//   try {
-//     const query = {
-//       ...(destination && { location: { $regex: destination, $options: "i" } }),
-//       ...(stars && { starRating: { $in: stars.split(",").map(Number) } }),
-//       ...(types && { hotelType: { $in: types.split(",") } }),
-//       ...(facilities && { facilityTypes: { $all: facilities.split(",") } }),
-//       ...(maxPrice && { pricePerNight: { $lte: Number(maxPrice) } }),
-//     };
-
-//     const sort = {};
-//     if (sortOption === "pricePerNightAsc") {
-//       sort.pricePerNight = 1;
-//     } else if (sortOption === "pricePerNightDesc") {
-//       sort.pricePerNight = -1;
-//     } else if (sortOption === "starRating") {
-//       sort.starRating = -1;
-//     }
-
-//     const hotels = await Hotel.find(query)
-//       .skip((page - 1) * 10)
-//       .limit(10)
-//       .sort(sort);
-
-//     const total = await Hotel.countDocuments(query);
-
-//     res.json({
-//       hotels,
-//       pagination: { total, page, pages: Math.ceil(total / 10) },
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: "Error searching hotels", error });
-//   }
-// });
-
 router.get(
   "/:id",
   [param("id").notEmpty().withMessage("Hotel ID is required")],
@@ -116,62 +71,149 @@ router.get(
     }
   }
 );
+
+router.post("/:hotelId/bookings/payment-intent", verifyToken, async () => {
+  // 1. total cost total nights * amount
+  // 2. hotelId
+  // 3. userId
+  const { numberOfNights } = req.body;
+  const hotelId = req.params.hotelId;
+  const hotel = await Hotel.findById(hotelId);
+
+  if (!hotel) {
+    return res.status(400).json({ message: "Hotel not found" });
+  }
+
+  const totalCost = hotel.pricePerNight * numberOfNights;
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: totalCost,
+    currency: "Ksh",
+    metadata: {
+      hotelId,
+      userId: req.userId,
+    },
+  });
+  if (!paymentIntent.client_secret) {
+    return res.status(500).json({ message: "Error creating payment intent" });
+  }
+
+  const response = {
+    paymentIntentId: paymentIntent.id,
+    client_secret: paymentIntent.client_secret.toString(),
+    totalCost,
+  };
+  res.send(response);
+});
+
+router.post("/:hotelId/bookings", verifyToken, async (req, res) => {
+  try {
+    const paymentIntentId = req.body.paymentIntentId;
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (!paymentIntent) {
+      return res.status(400).json({ message: "Payment intend not found" });
+    }
+
+    if (
+      paymentIntent.metadata.hotelId !== req.params.hotelId ||
+      paymentIntent.metadata.userId !== req.userId
+    ) {
+      return res.status(400).json({ message: "Payment intent mismatch" });
+    }
+
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({
+        message: `Payment intend not succeeded. Status: ${paymentIntent.status}`,
+      });
+    }
+
+    const newBooking = {
+      ...req.body,
+      userId: req.userId,
+    };
+
+    const hotel = await Hotel.findOneAndUpdate(
+      { _id: req.params.hotelId },
+      {
+        $push: { bookings: newBooking },
+      }
+    );
+
+    if (!hotel) {
+      res.status(400).json({ message: "Hotel not found" });
+    }
+
+    await hotel.save();
+    res.status(200).send();
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
 const constructSearchQuery = (queryParams) => {
   let constructedQuery = {};
+  try {
+    if (
+      (queryParams?.destination &&
+        typeof queryParams.destination === "string") ||
+      ("object" && queryParams.destination.trim() !== "")
+    ) {
+      const destinationRegex = new RegExp(queryParams.destination, "i");
 
-  if (
-    queryParams?.destination &&
-    typeof queryParams.destination === "string" &&
-    queryParams.destination.trim() !== ""
-  ) {
-    constructedQuery.$or = [
-      { city: new RegExp(queryParams?.destination, "i") },
-      { country: new RegExp(queryParams?.destination, "i") },
-    ];
+      constructedQuery.$or = [
+        // { city: new RegExp(queryParams?.destination, "i") },
+        // { country: new RegExp(queryParams?.destination, "i") },
+        { city: destinationRegex },
+        { country: destinationRegex },
+      ];
+    }
+
+    if (queryParams.adultCount) {
+      constructedQuery.adultCount = {
+        $gte: parseInt(queryParams.adultCount),
+      };
+    }
+
+    if (queryParams.childCount) {
+      constructedQuery.childCount = {
+        $gte: parseInt(queryParams.childCount),
+      };
+    }
+
+    if (queryParams.facilities) {
+      constructedQuery.facilities = {
+        $all: Array.isArray(queryParams.facilities)
+          ? queryParams.facilities
+          : [queryParams.facilities],
+      };
+    }
+
+    if (queryParams.types) {
+      constructedQuery.type = {
+        $in: Array.isArray(queryParams.types)
+          ? queryParams.types
+          : [queryParams.types],
+      };
+    }
+
+    if (queryParams.stars) {
+      const starRatings = Array.isArray(queryParams.stars)
+        ? queryParams.stars.map((star) => parseInt(star))
+        : parseInt(queryParams.stars);
+
+      constructedQuery.starRating = { $in: starRatings };
+    }
+
+    if (queryParams.maxPrice) {
+      constructedQuery.pricePerNight = {
+        $lte: parseInt(queryParams.maxPrice).toString(),
+      };
+    }
+    return constructedQuery;
+  } catch (error) {
+    res.status(500).json({ message: "Query not available" });
   }
-
-  if (queryParams.adultCount) {
-    constructedQuery.adultCount = {
-      $gte: parseInt(queryParams.adultCount),
-    };
-  }
-
-  if (queryParams.childCount) {
-    constructedQuery.childCount = {
-      $gte: parseInt(queryParams.childCount),
-    };
-  }
-
-  if (queryParams.facilities) {
-    constructedQuery.facilities = {
-      $all: Array.isArray(queryParams.facilities)
-        ? queryParams.facilities
-        : [queryParams.facilities],
-    };
-  }
-
-  if (queryParams.types) {
-    constructedQuery.type = {
-      $in: Array.isArray(queryParams.types)
-        ? queryParams.types
-        : [queryParams.types],
-    };
-  }
-
-  if (queryParams.stars) {
-    const starRatings = Array.isArray(queryParams.stars)
-      ? queryParams.stars.map((star) => parseInt(star))
-      : parseInt(queryParams.stars);
-
-    constructedQuery.starRating = { $in: starRatings };
-  }
-
-  if (queryParams.maxPrice) {
-    constructedQuery.pricePerNight = {
-      $lte: parseInt(queryParams.maxPrice).toString(),
-    };
-  }
-  console.log("constructed query:", constructedQuery);
-  return constructedQuery;
 };
 export default router;

@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+const bookingSchema = new mongoose.Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true },
+  adultCount: { type: String, required: true },
+  childCount: { type: String, required: true },
+  chcekIn: { type: String, required: true },
+  checkOut: { type: String, required: true },
+  userId: { type: String, required: true },
+  totalCoast: { type: String, required: true },
+});
+
 const hotelSchema = new mongoose.Schema({
   // userId: { type: String, required: true },
   name: { type: String, required: true },
@@ -15,6 +27,7 @@ const hotelSchema = new mongoose.Schema({
   imageUrls: [{ type: [String], required: true }],
   lastUpdated: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+  bookings: [bookingSchema],
 });
 
 const Hotel = mongoose.model("Hotel", hotelSchema);
