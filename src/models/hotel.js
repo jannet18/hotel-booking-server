@@ -9,7 +9,7 @@ const bookingSchema = new mongoose.Schema({
   chcekIn: { type: String, required: true },
   checkOut: { type: String, required: true },
   userId: { type: String, required: true },
-  totalCoast: { type: String, required: true },
+  totalCost: { type: String, required: true },
 });
 
 const hotelSchema = new mongoose.Schema({
