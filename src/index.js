@@ -15,18 +15,23 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 await mongoose.connect(process.env.MONGODB_CONNECTION);
 
-const __dirname = path.resolve();
+// const __dirname = path.resolve();
 const app = express();
 app.use(cookieParser());
 app.use(express.json()); //converts body of API into json automatically
 app.use(express.urlencoded({ extended: true })); // parse the url and get url parameters
+
 const corsOptions = {
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
   credentials: true,
 };
 app.use(cors(corsOptions));
+const staticPath = path.resolve("client/dist");
+app.use(express.static(staticPath));
+
 // app.use(express.static(path.join(__dirname, "../../client/dist")));
 // app.get("*", (req, res) => {
 //   res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
@@ -35,6 +40,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/my-hotels", myHotelRoutes);
 app.use("/api/hotels", hotelRoutes);
+
+app.get("*", (req, res) => {
+  res.sendFile(path.resolve(staticPath, "index.html"));
+});
 
 app.listen(5000, () => {
   console.log("Server is active");
