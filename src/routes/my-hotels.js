@@ -1,9 +1,9 @@
 import express from "express";
 import multer from "multer";
 import cloudinary from "cloudinary";
-import Hotel from "../models/Hotel.js";
 import verifyToken from "../middleware/authMiddleware.js";
 import { body, validationResult } from "express-validator";
+import Hotel from "../models/Hotel.js";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
