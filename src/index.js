@@ -18,7 +18,6 @@ cloudinary.config({
 
 await mongoose.connect(process.env.MONGODB_CONNECTION);
 
-// const __dirname = path.resolve();
 const app = express();
 app.use(cookieParser());
 app.use(express.json()); //converts body of API into json automatically
@@ -32,10 +31,6 @@ app.use(cors(corsOptions));
 const staticPath = path.resolve("client/dist");
 app.use(express.static(staticPath));
 
-// app.use(express.static(path.join(__dirname, "../../client/dist")));
-// app.get("*", (req, res) => {
-//   res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
-// });
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/my-hotels", myHotelRoutes);

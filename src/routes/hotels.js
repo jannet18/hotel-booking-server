@@ -1,5 +1,5 @@
 import express from "express";
-// import Hotel from "../models/Hotel.js";
+import Hotel from "../models/Hotel.js";
 import { param, validationResult } from "express-validator";
 import Stripe from "stripe";
 import verifyToken from "../middleware/authMiddleware.js";
