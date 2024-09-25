@@ -126,8 +126,8 @@ router.post(
     // 1. total cost total nights * amount
     // 2. hotelId
     // 3. userId
-    console.log("Request body:", req.body);
-    console.log("Request params:", req.params);
+    // console.log("Request body:", req.body);
+    // console.log("Request params:", req.params);
     const { numberOfNights } = req.body;
     const hotelId = req.params.hotelId;
     const hotel = await Hotel.findById(hotelId);
@@ -155,7 +155,7 @@ router.post(
       client_secret: paymentIntent.client_secret.toString(),
       totalCost,
     };
-    console.log("Response:", response);
+    // console.log("Response:", response);
     res.send(response);
   }
 );

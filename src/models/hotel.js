@@ -6,14 +6,14 @@ const bookingSchema = new mongoose.Schema({
   email: { type: String, required: true },
   adultCount: { type: String, required: true },
   childCount: { type: String, required: true },
-  chcekIn: { type: String, required: true },
+  checkIn: { type: String, required: true },
   checkOut: { type: String, required: true },
   userId: { type: String, required: true },
   totalCost: { type: String, required: true },
 });
 
 const hotelSchema = new mongoose.Schema({
-  // userId: { type: String, required: true },
+  userId: { type: String, required: true },
   name: { type: String, required: true },
   city: { type: String, required: true },
   country: { type: String, required: true },
