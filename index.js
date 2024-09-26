@@ -2,17 +2,15 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import mongoose from "mongoose";
-import userRoutes from "./routes/Users.js";
-import authRoutes from "./routes/auth.js";
+import userRoutes from "./src/routes/Users.js";
+import authRoutes from "./src/routes/auth.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
-import myHotelRoutes from "../src/routes/my-hotels.js/";
-// import myHotelRoutes from "./routes/my-hotels.js";
-// import myHotelRoutes from "./routes/my-hotels.js";
+import myHotelRoutes from "./src/routes/my-hotels.js";
 
-import hotelRoutes from "./routes/hotels.js";
-import bookingRoutes from "./routes/my-bookings.js";
+import hotelRoutes from "./src/routes/hotels.js";
+import bookingRoutes from "./src/routes/my-bookings.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -32,7 +30,7 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-const staticPath = path.resolve("client/dist");
+const staticPath = path.resolve("../../client/dist");
 app.use(express.static(staticPath));
 
 app.use("/api/auth", authRoutes);

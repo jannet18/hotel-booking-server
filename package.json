@@ -5,8 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node --experimental-modules src/index.js",
+    "dev": "nodemon server/index.js",
+    "start": "node server/index.js",
     "e2e": "cross-env DOTEN_CONFIG_PATH=.env.e2e nodemon"
   },
   "author": "",
