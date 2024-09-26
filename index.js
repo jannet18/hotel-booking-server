@@ -11,6 +11,7 @@ import myHotelRoutes from "./src/routes/my-hotels.js";
 
 import hotelRoutes from "./src/routes/hotels.js";
 import bookingRoutes from "./src/routes/my-bookings.js";
+import { fileURLToPath } from "url";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -30,7 +31,9 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-const staticPath = path.resolve("../../client/dist");
+
+const __dirname = fileURLToPath(import.meta.url);
+const staticPath = path.join(__dirname, "../../client/dist");
 app.use(express.static(staticPath));
 
 app.use("/api/auth", authRoutes);
@@ -40,7 +43,7 @@ app.use("/api/hotels", hotelRoutes);
 app.use("/api/my-bookings", bookingRoutes);
 
 app.get("*", (req, res) => {
-  res.sendFile(path.resolve(staticPath, "index.html"));
+  res.sendFile(path.join(staticPath, "../../client/dist/index.html"));
 });
 
 app.listen(5000, () => {
